@@ -93,6 +93,10 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:right;
 </main>
 <script>
 (function(){
+window.addEventListener('error', function(e) {
+  const el = document.getElementById('message');
+  if (el) { el.textContent = 'حدث خطأ في تشغيل البرنامج: ' + (e.message || 'خطأ غير معروف'); el.style.color = '#a33232'; }
+});
 const KEY='stockReceivingList_v1';
 const barcode=document.getElementById('barcode'), qty=document.getElementById('qty');
 const rows=document.getElementById('rows'), empty=document.getElementById('empty'), message=document.getElementById('message');
@@ -131,7 +135,7 @@ function download(name,content,type){
 }
 document.getElementById('exportBtn').onclick=()=>{
  const keys=Object.keys(items).sort();if(!keys.length){say('القائمة فارغة؛ لا يوجد ما يمكن تصديره.',true);return}
- const csv=['Barcode,Received Quantity',...keys.map(k=>'"'+k.replace(/"/g,'""')+'",'+Number(items[k])].join('\r\n');
+ const csv=['Barcode,Received Quantity',...keys.map(k=>'"'+k.replace(/"/g,'""')+'",'+Number(items[k]))].join('\r\n');
  download('stock_receiving.csv',csv,'text/csv');say('تم تجهيز ملف CSV المتوافق مع Excel.');
 };
 document.getElementById('backupBtn').onclick=()=>{
