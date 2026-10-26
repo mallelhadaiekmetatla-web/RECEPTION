@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#123b35">
+<title>استقبال السلع</title>
+<style>
+:root{--ink:#172b27;--muted:#61716c;--line:#d8e2de;--bg:#f4f7f5;--card:#fff;--accent:#176b58;--accent2:#e4f3ee;--danger:#a33232}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,"Noto Sans Arabic",sans-serif;font-size:16px}
+main{max-width:760px;margin:auto;padding:16px}
+header{background:#123b35;color:white;border-radius:18px;padding:20px;margin-bottom:14px}
+header h1{margin:0 0 7px;font-size:25px}header p{margin:0;color:#d8e9e3;line-height:1.6;font-size:14px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:12px 0}
+h2{font-size:18px;margin:0 0 13px}
+label{display:block;font-weight:700;margin:12px 0 6px}
+input{width:100%;font-size:18px;padding:13px;border:1px solid #bdcbc5;border-radius:10px;background:#fff;color:var(--ink)}
+button{font-size:16px;font-weight:700;border:0;border-radius:10px;padding:13px 14px;min-height:46px;cursor:pointer}
+.primary{background:var(--accent);color:#fff;width:100%;margin-top:14px}.secondary{background:var(--accent2);color:#174d40}.danger{background:#faeaea;color:var(--danger)}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.note{color:var(--muted);font-size:13px;line-height:1.55;margin:8px 0 0}
+#cameraBox{display:none;margin-top:12px}video{width:100%;max-height:320px;background:#101816;border-radius:12px;object-fit:cover}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:#f1f7f4;border-radius:12px;padding:12px}.stat small{display:block;color:var(--muted);margin-bottom:5px}.stat strong{font-size:25px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:right;padding:11px 7px;border-bottom:1px solid var(--line);overflow-wrap:anywhere}th{color:var(--muted);font-weight:700}
+.table-wrap{overflow-x:auto}.empty{text-align:center;color:var(--muted);padding:22px 8px}
+.item-actions{display:flex;gap:6px;flex-wrap:wrap}.mini{padding:7px 9px;min-height:34px;font-size:13px}
+#message{margin-top:10px;line-height:1.5;font-size:14px}
+@media(min-width:600px){main{padding:24px}.entrygrid{display:grid;grid-template-columns:1.4fr .8fr;gap:12px}.entrygrid label{margin-top:0}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>استقبال السلع</h1>
+  <p>امسح الباركود، أدخل الكمية، ثم أضف المنتج. إذا تكرر الباركود، تُضاف الكمية إلى السجل نفسه.</p>
+</header>
+
+<section class="panel">
+  <h2>تسجيل منتج</h2>
+  <div class="entrygrid">
+    <div>
+      <label for="barcode">الباركود</label>
+      <input id="barcode" inputmode="numeric" autocomplete="off" placeholder="امسح الباركود أو اكتبه">
+    </div>
+    <div>
+      <label for="qty">الكمية المستلمة</label>
+      <input id="qty" type="number" min="1" step="1" value="1" inputmode="numeric">
+    </div>
+  </div>
+  <button class="primary" id="addBtn">إضافة الكمية</button>
+  <div class="actions">
+    <button class="secondary" id="scanBtn">مسح بالكاميرا</button>
+    <button class="secondary" id="focusBtn">إدخال باركود جديد</button>
+  </div>
+  <div id="cameraBox">
+    <video id="video" playsinline muted></video>
+    <p class="note">وجّه الكاميرا نحو الباركود وثبّت الهاتف قليلاً. إذا لم يدعم المتصفح قراءة الباركود، يمكنك إدخاله بقارئ خارجي أو كتابته يدوياً.</p>
+    <button class="danger" id="stopBtn" style="width:100%;margin-top:8px">إيقاف الكاميرا</button>
+  </div>
+  <div id="message" role="status" aria-live="polite"></div>
+  <p class="note">البيانات تُحفظ على هذا المتصفح في هذا الجهاز. لا تمسح بيانات المتصفح قبل تصدير نسخة Excel.</p>
+</section>
+
+<section class="panel">
+  <h2>ملخص الاستقبال</h2>
+  <div class="stats">
+    <div class="stat"><small>عدد الباركودات المختلفة</small><strong id="productCount">0</strong></div>
+    <div class="stat"><small>إجمالي القطع</small><strong id="pieceCount">0</strong></div>
+  </div>
+  <div class="actions">
+    <button class="primary" id="exportBtn">تصدير ملف Excel (CSV)</button>
+    <button class="secondary" id="backupBtn">نسخ احتياطي JSON</button>
+  </div>
+  <p class="note">ملف CSV يفتح في Excel. إذا ظهرت الحروف العربية بشكل غير صحيح، افتحه عبر Excel باستخدام استيراد البيانات من نص/CSV واختيار UTF-8.</p>
+</section>
+
+<section class="panel">
+  <h2>قائمة السلع المستلمة</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>الباركود</th><th>الكمية</th><th>تعديل</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <div class="empty" id="empty">لم تُسجّل أي سلعة بعد.</div>
+  <div class="actions">
+    <button class="secondary" id="importBtn">استرجاع نسخة JSON</button>
+    <button class="danger" id="clearBtn">مسح القائمة</button>
+  </div>
+  <input id="importFile" type="file" accept=".json,application/json" hidden>
+</section>
+</main>
+<script>
+(function(){
+const KEY='stockReceivingList_v1';
+const barcode=document.getElementById('barcode'), qty=document.getElementById('qty');
+const rows=document.getElementById('rows'), empty=document.getElementById('empty'), message=document.getElementById('message');
+const cameraBox=document.getElementById('cameraBox'), video=document.getElementById('video');
+let items={}, stream=null, scanning=false, scanDetector=null, lastCode='', lastAt=0;
+function say(t, bad=false){message.textContent=t;message.style.color=bad?'#a33232':'#176b58'}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){say('تعذر الحفظ في المتصفح. صدّر نسخة احتياطية الآن.',true)}}
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY)||'{}');if(v&&typeof v==='object')items=v}catch(e){items={}}render()}
+function render(){
+ rows.textContent='';const keys=Object.keys(items).sort();let total=0;
+ keys.forEach((code,i)=>{const q=Number(items[code])||0;total+=q;const tr=document.createElement('tr');
+ [String(i+1),code,String(q)].forEach(v=>{const td=document.createElement('td');td.textContent=v;tr.appendChild(td)});
+ const td=document.createElement('td');const wrap=document.createElement('div');wrap.className='item-actions';
+ const edit=document.createElement('button');edit.className='mini secondary';edit.textContent='تعديل';edit.onclick=()=>{const val=prompt('أدخل الكمية الصحيحة للباركود '+code, String(items[code]));if(val===null)return;const n=Number(val);if(!Number.isInteger(n)||n<1){alert('أدخل عدداً صحيحاً أكبر من صفر.');return}items[code]=n;save();render();say('تم تعديل الكمية.')};
+ const del=document.createElement('button');del.className='mini danger';del.textContent='حذف';del.onclick=()=>{if(confirm('حذف هذا المنتج من القائمة؟')){delete items[code];save();render();say('تم حذف المنتج.')}};
+ wrap.append(edit,del);td.appendChild(wrap);tr.appendChild(td);rows.appendChild(tr);
+ });
+ document.getElementById('productCount').textContent=keys.length;
+ document.getElementById('pieceCount').textContent=total;
+ empty.style.display=keys.length?'none':'block';
+}
+function add(){
+ const code=barcode.value.trim();const n=Number(qty.value);
+ if(!code){say('امسح الباركود أو أدخله أولاً.',true);barcode.focus();return}
+ if(!Number.isSafeInteger(n)||n<1){say('الكمية يجب أن تكون عدداً صحيحاً أكبر من صفر.',true);qty.focus();return}
+ items[code]=(Number(items[code])||0)+n;save();render();say('تم تسجيل '+n+' قطعة للباركود '+code+'.');
+ barcode.value='';qty.value='1';barcode.focus();
+}
+document.getElementById('addBtn').addEventListener('click',add);
+barcode.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();qty.focus();qty.select()}});
+qty.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();add()}});
+document.getElementById('focusBtn').onclick=()=>{barcode.focus();barcode.select()};
+function download(name,content,type){
+ const blob=new Blob(['\ufeff'+content],{type:type+';charset=utf-8'});const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+}
+document.getElementById('exportBtn').onclick=()=>{
+ const keys=Object.keys(items).sort();if(!keys.length){say('القائمة فارغة؛ لا يوجد ما يمكن تصديره.',true);return}
+ const csv=['Barcode,Received Quantity',...keys.map(k=>'"'+k.replace(/"/g,'""')+'",'+Number(items[k])].join('\r\n');
+ download('stock_receiving.csv',csv,'text/csv');say('تم تجهيز ملف CSV المتوافق مع Excel.');
+};
+document.getElementById('backupBtn').onclick=()=>{
+ download('stock_receiving_backup.json',JSON.stringify({exportedAt:new Date().toISOString(),items:items},null,2),'application/json');say('تم تنزيل النسخة الاحتياطية.');
+};
+document.getElementById('importBtn').onclick=()=>document.getElementById('importFile').click();
+document.getElementById('importFile').addEventListener('change',async e=>{
+ const f=e.target.files[0];if(!f)return;
+ try{const data=JSON.parse(await f.text());const incoming=data.items||data;if(!incoming||typeof incoming!=='object'||Array.isArray(incoming))throw new Error();
+ if(!confirm('سيتم دمج الكميات من النسخة الاحتياطية مع القائمة الحالية. هل تريد المتابعة؟'))return;
+ for(const [k,v] of Object.entries(incoming)){const n=Number(v);if(k&&Number.isSafeInteger(n)&&n>0)items[k]=(Number(items[k])||0)+n}
+ save();render();say('تم استرجاع ودمج النسخة الاحتياطية.');
+ }catch(err){say('الملف غير صالح أو غير مفهوم.',true)}finally{e.target.value=''}
+});
+document.getElementById('clearBtn').onclick=()=>{if(confirm('هل أنت متأكد؟ سيتم مسح كل السلع المسجلة من هذا المتصفح. صدّر نسخة أولاً إذا كنت تحتاجها.')){items={};save();render();say('تم مسح القائمة.')}};
+async function stopCamera(){
+ scanning=false;if(stream){stream.getTracks().forEach(t=>t.stop());stream=null}video.srcObject=null;cameraBox.style.display='none';
+}
+document.getElementById('stopBtn').onclick=stopCamera;
+document.getElementById('scanBtn').onclick=async()=>{
+ if(scanning){await stopCamera();return}
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){say('هذا المتصفح لا يتيح الكاميرا هنا. افتح التطبيق عبر رابط HTTPS أو أدخل الباركود يدوياً.',true);return}
+ if(!('BarcodeDetector' in window)){say('قراءة الباركود بالكاميرا غير مدعومة في هذا المتصفح. جرّب Chrome محدّثاً على Android، أو أدخل الباركود يدوياً.',true);return}
+ try{
+  scanDetector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','itf','qr_code']});
+  stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false});
+  video.srcObject=stream;cameraBox.style.display='block';await video.play();scanning=true;say('الكاميرا تعمل. وجّهها نحو الباركود.');
+  const loop=async()=>{if(!scanning)return;try{const found=await scanDetector.detect(video);if(found.length){const code=found[0].rawValue;const now=Date.now();if(code&&!(code===lastCode&&now-lastAt<1800)){lastCode=code;lastAt=now;barcode.value=code;await stopCamera();say('تمت قراءة الباركود. أدخل الكمية ثم اضغط إضافة.');qty.focus();qty.select();return}}}catch(e){}requestAnimationFrame(loop)};
+  requestAnimationFrame(loop);
+ }catch(err){await stopCamera();say('تعذر تشغيل الكاميرا. اسمح للمتصفح باستخدام الكاميرا، وتأكد أن الصفحة مفتوحة عبر HTTPS.',true)}
+};
+window.addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop())});
+load();
+})();
+</script>
+</body>
+</html>
